@@ -1,17 +1,25 @@
-import { json, Router } from "express";
+import { Router, Request } from "express";
 import multer from "multer";
-import CreateUserService from "../services/CreateUserService";
-import ensureAuthenticated from "../middlewares/ensureAuthenticated";
 import uploadConfig from "../config/upload";
+
+import CreateUserService from "../services/CreateUserService";
 import UpdateUserAvatarService from "../services/UpdateUserAvatarService";
+
+import ensureAuthenticated from "../middlewares/ensureAuthenticated";
 
 const usersRouter = Router();
 const upload = multer(uploadConfig);
 
-usersRouter.post("/", async (request, response) => {
+usersRouter.post("/", async (request: Request, response) => {
     const { name, email, password } = request.body;
+
     const createUser = new CreateUserService();
-    const user = await createUser.execute({ name, email, password });
+
+    const user = await createUser.execute({
+        name,
+        email,
+        password,
+    });
 
     const userWithoutPassword = {
         id: user.id,
@@ -28,24 +36,22 @@ usersRouter.patch(
     "/avatar",
     ensureAuthenticated,
     upload.single("avatar"),
-    async (request, response) => {
-        const updateUserAvatarService = new UpdateUserAvatarService();
+    async (request: Request, response) => {
+        const updateUserAvatar = new UpdateUserAvatarService();
+        const user = await updateUserAvatar.execute({
+            user_id: request.user?.id,
+            avatarFilename: request.file.filename,
+        });
 
-        // const user = await updateUserAvatarService.execute({
-        //    user_id: request.user.id,
-        //    avatarFilename: request.file.filename,
-        // });
+        const userWithoutPassword = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+        };
 
-        // const userWithoutPassword = {
-        //     id: user.id,
-        //     name: user.name,
-        //     email: user.email,
-        //     created_at: user.created_at,
-        //     updated_at: user.updated_at,
-        // };
-        // return response.json(userWithoutPassword);
-        return response.json({ ok: true });
+        return response.json(userWithoutPassword);
     }
 );
-
 export default usersRouter;
